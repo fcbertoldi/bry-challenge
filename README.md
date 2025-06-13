@@ -7,8 +7,8 @@ Linux:
 
 - `gcc` >= 11.0
 - `cmake` >= 3.23
-- `conan` >= 2.0
-- `ninja` (optional)
+- `vcpkg` - gerenciador de pacotes
+- `ninja` - sistema de build
 
 ## Building
 
