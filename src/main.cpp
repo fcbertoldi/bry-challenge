@@ -5,23 +5,43 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 
+namespace {
+
 constexpr size_t BUFFER_SIZE = 8192;
 
-struct MdCtxGuard {
-    MdCtxGuard(EVP_MD_CTX* ctx) noexcept : ctx(ctx) {}
-
-    MdCtxGuard(const MdCtxGuard&) = delete;
-
-    MdCtxGuard& operator=(const MdCtxGuard&) = delete;
+class MdCtxGuard {
+public:
+    explicit MdCtxGuard(EVP_MD_CTX* ctx = EVP_MD_CTX_new()) noexcept
+        : ctx_(ctx) {}
 
     ~MdCtxGuard() noexcept {
-        if (ctx) {
-            EVP_MD_CTX_free(ctx);
+        if (ctx_) {
+            EVP_MD_CTX_free(ctx_);
         }
     }
 
-    EVP_MD_CTX* ctx;
+    MdCtxGuard(const MdCtxGuard&) = delete;
+    MdCtxGuard& operator=(const MdCtxGuard&) = delete;
+    MdCtxGuard(MdCtxGuard&&) = delete;
+    MdCtxGuard& operator=(MdCtxGuard&&) = delete;
+
+    EVP_MD_CTX* get() const noexcept { return ctx_; }
+    operator EVP_MD_CTX*() const noexcept { return ctx_; }
+
+private:
+    EVP_MD_CTX* ctx_;
 };
+
+// output hash in hexadecimal format
+void printHash(const unsigned char* hash, unsigned int len, const char* filePath) {
+    std::cout << std::hex << std::setfill('0');
+    for (unsigned int i = 0; i < len; ++i) {
+        std::cout << std::setw(2) << static_cast<int>(hash[i]);
+    }
+    std::cout << "  " << filePath << std::endl;
+}
+
+}
 
 int main(int argc, char* argv[]) {
     if (argc != 2) {
@@ -33,13 +53,12 @@ int main(int argc, char* argv[]) {
     std::ifstream file(filePath, std::ios::binary);
 
     if (!file) {
-        std::cerr << "Error: Could not open file: " << filePath << "\n";
+        std::cerr << "Error: Could not open file: " << filePath << '\n';
         return 1;
     }
 
     // Initialize OpenSSL digest context
-    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-    MdCtxGuard ctxGuard{ctx};
+    MdCtxGuard ctx;
     if (!ctx) {
         std::cerr << "Error: Failed to create digest context.\n";
         return 1;
@@ -53,12 +72,10 @@ int main(int argc, char* argv[]) {
     std::vector<char> buffer(BUFFER_SIZE);
     while (file.good()) {
         file.read(buffer.data(), buffer.size());
-        std::streamsize bytesRead = file.gcount();
-        if (bytesRead > 0) {
-            if (EVP_DigestUpdate(ctx, buffer.data(), bytesRead) != 1) {
-                std::cerr << "Error: EVP_DigestUpdate failed.\n";
-                return 1;
-            }
+        auto bytesRead = file.gcount();
+        if (bytesRead > 0 && EVP_DigestUpdate(ctx, buffer.data(), bytesRead) != 1) {
+            std::cerr << "Error: EVP_DigestUpdate failed.\n";
+            return 1;
         }
     }
 
@@ -70,11 +87,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Output hash in hexadecimal format
-    for (unsigned int i = 0; i < hashLen; ++i) {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
-    }
-    std::cout << "  " << filePath << std::endl;
+    printHash(hash, hashLen, filePath);
 
     return 0;
 }
