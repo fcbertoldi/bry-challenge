@@ -4,33 +4,11 @@
 #include <iomanip>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
+#include <scope_guard/scope_guard.hpp>
 
 namespace {
 
 constexpr size_t BUFFER_SIZE = 8192;
-
-class MdCtxGuard {
-public:
-    explicit MdCtxGuard(EVP_MD_CTX* ctx = EVP_MD_CTX_new()) noexcept
-        : ctx_(ctx) {}
-
-    ~MdCtxGuard() noexcept {
-        if (ctx_) {
-            EVP_MD_CTX_free(ctx_);
-        }
-    }
-
-    MdCtxGuard(const MdCtxGuard&) = delete;
-    MdCtxGuard& operator=(const MdCtxGuard&) = delete;
-    MdCtxGuard(MdCtxGuard&&) = delete;
-    MdCtxGuard& operator=(MdCtxGuard&&) = delete;
-
-    EVP_MD_CTX* get() const noexcept { return ctx_; }
-    operator EVP_MD_CTX*() const noexcept { return ctx_; }
-
-private:
-    EVP_MD_CTX* ctx_;
-};
 
 // output hash in hexadecimal format
 void printHash(const unsigned char* hash, unsigned int len, const char* filePath) {
@@ -58,7 +36,10 @@ int main(int argc, char* argv[]) {
     }
 
     // Initialize OpenSSL digest context
-    MdCtxGuard ctx;
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+    auto ctxGuard = sg::make_scope_guard([&]{
+        EVP_MD_CTX_free(ctx);
+    });
     if (!ctx) {
         std::cerr << "Error: Failed to create digest context.\n";
         return 1;
