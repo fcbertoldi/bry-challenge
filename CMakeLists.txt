@@ -5,7 +5,9 @@ project(bry-challenge CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+add_subdirectory(external/scope_guard)
+
 find_package(OpenSSL REQUIRED)
 
 add_executable(bry-checksum src/main.cpp)
-target_link_libraries(bry-checksum PRIVATE OpenSSL::Crypto)
+target_link_libraries(bry-checksum PRIVATE OpenSSL::Crypto scope_guard)
