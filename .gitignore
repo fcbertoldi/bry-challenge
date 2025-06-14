@@ -80,6 +80,14 @@ deactivate_run.sh
 environment_run.ps1.env
 environment_run.sh.env
 
+### vcpkg ###
+# Vcpkg
+
+vcpkg-manifest-install.log
+
+## Manifest Mode
+vcpkg_installed/
+
 ### Emacs ###
 # -*- mode: gitignore; -*-
 *~
