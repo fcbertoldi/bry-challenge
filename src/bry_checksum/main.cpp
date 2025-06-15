@@ -2,21 +2,10 @@
 #include <cstdio>
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <vector>
 #include <iomanip>
 
-namespace {
-
-// output hash in hexadecimal format
-void printHash(const unsigned char* hash, unsigned int len, const char* filePath) {
-    std::cout << std::hex << std::setfill('0');
-    for (unsigned int i = 0; i < len; ++i) {
-        std::cout << std::setw(2) << static_cast<int>(hash[i]);
-    }
-    std::cout << "  " << filePath << std::endl;
-}
-
-}
 
 int main(int argc, char* argv[]) {
 
@@ -36,11 +25,13 @@ int main(int argc, char* argv[]) {
     }
 
     std::vector<unsigned char> hash;
-    ret = bry_challenge::msgDigest(file, hash);
+    std::string hexDigest;
+    ret = bry_challenge::msgDigestHex(file, hexDigest);
     if (ret != 0) {
         return ret;
     }
-    printHash(hash.data(), hash.size(), filePath);
+
+    std::cout << hexDigest << "  " << filePath << std::endl;
 
     ret = 0;
     return ret;

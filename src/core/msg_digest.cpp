@@ -1,6 +1,8 @@
 #include "bry_challenge/core/msg_digest.h"
 
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -11,6 +13,16 @@
 namespace {
 
 constexpr size_t BUFFER_SIZE = 8192;
+
+std::string toHex(const unsigned char* hash, unsigned int len) {
+    std::ostringstream sstream;
+    sstream << std::hex << std::setfill('0');
+    for (unsigned int i = 0; i < len; ++i) {
+        sstream << std::setw(2) << static_cast<int>(hash[i]);
+    }
+
+    return sstream.str();
+}
 
 }
 
@@ -84,4 +96,13 @@ int msgDigest(std::istream& istream, std::vector<unsigned char>& outDigest) {
     return ret;
 }
 
+int msgDigestHex(std::istream& istream, std::string& hexDigest) {
+    std::vector<unsigned char> outDigest;
+    if (int res = msgDigest(istream, outDigest) != 0) {
+        return res;
+    }
+
+    hexDigest = toHex(outDigest.data(), outDigest.size());
+    return 0;
+}
 }
