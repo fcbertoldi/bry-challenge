@@ -1,3 +1,4 @@
+#include "bry_challenge/core/msg_digest.h"
 #include <cstdio>
 #include <iostream>
 #include <fstream>
@@ -38,61 +39,12 @@ int main(int argc, char* argv[]) {
         return ret;
     }
 
-    EVP_MD* msgDigest = nullptr;
-    EVP_MD_CTX* ctx = nullptr;
-
-    auto ctxGuard = sg::make_scope_guard([&]{
-        if (ret != 0) {
-            ERR_print_errors_fp(stderr);
-        }
-        EVP_MD_free(msgDigest);
-        EVP_MD_CTX_free(ctx);
-    });
-
-    msgDigest = EVP_MD_fetch(nullptr, "SHA-512", nullptr);
-    if (!msgDigest) {
-        std::cerr << "EVP_MD_fetch could not find SHA-512.\n";
+    std::vector<unsigned char> hash;
+    ret = bry_challenge::msgDigest(file, hash);
+    if (ret != 0) {
         return ret;
     }
-
-    const int digestLen = EVP_MD_get_size(msgDigest);
-    if (digestLen < 0) {
-        std::cerr << "EVP_MD_get_size returned invalid size.\n";
-        return ret;
-    }
-
-
-    // Initialize OpenSSL digest context
-    ctx = EVP_MD_CTX_new();
-    if (!ctx) {
-        std::cerr << "Error: Failed to create digest context.\n";
-        return ret;
-    }
-
-    if (EVP_DigestInit_ex(ctx, msgDigest, nullptr) != 1) {
-        std::cerr << "Error: EVP_DigestInit_ex failed.\n";
-        return ret;
-    }
-
-    std::vector<char> buffer(digestLen);
-    while (file.good()) {
-        file.read(buffer.data(), buffer.size());
-        auto bytesRead = file.gcount();
-        if (bytesRead > 0 && EVP_DigestUpdate(ctx, buffer.data(), bytesRead) != 1) {
-            std::cerr << "Error: EVP_DigestUpdate failed.\n";
-            return ret;
-        }
-    }
-
-    unsigned char hash[EVP_MAX_MD_SIZE];
-    unsigned int hashLen = 0;
-
-    if (EVP_DigestFinal_ex(ctx, hash, &hashLen) != 1) {
-        std::cerr << "Error: EVP_DigestFinal_ex failed.\n";
-        return ret;
-    }
-
-    printHash(hash, hashLen, filePath);
+    printHash(hash.data(), hash.size(), filePath);
 
     ret = 0;
     return ret;
