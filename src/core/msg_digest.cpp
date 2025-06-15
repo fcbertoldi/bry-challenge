@@ -52,8 +52,6 @@ int msgDigest(std::istream& istream, std::vector<unsigned char>& outDigest) {
         return ret;
     }
 
-
-
     // Initialize OpenSSL digest context
     ctx = EVP_MD_CTX_new();
     if (!ctx) {

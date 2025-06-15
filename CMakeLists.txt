@@ -12,7 +12,7 @@ find_package(Catch2 CONFIG REQUIRED)
 
 include_directories(include)
 
-add_library(core STATIC src/core/msg_digest.cpp)
+add_library(core STATIC src/core/msg_digest.cpp src/core/cms_signature.cpp)
 target_include_directories(core PUBLIC include)
 target_link_libraries(core PUBLIC OpenSSL::Crypto PRIVATE scope_guard)
 
