@@ -16,5 +16,5 @@ TEST_CASE("msgDigest", "[core]") {
         "dc1a7de77c59a29f366a4b154b03ad7d99013e36e08beb50d976358bea7b045884fe72111b27cf7d6302916b2691ac7696c1637e1ab44584d8d6613825149e35"
     );
 
-    REQUIRE( hexDigest == expected);
+    REQUIRE(hexDigest == expected);
 }
