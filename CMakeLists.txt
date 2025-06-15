@@ -9,5 +9,5 @@ add_subdirectory(external/scope_guard)
 
 find_package(OpenSSL REQUIRED)
 
-add_executable(bry-checksum src/main.cpp)
+add_executable(bry-checksum src/bry_checksum/main.cpp)
 target_link_libraries(bry-checksum PRIVATE OpenSSL::Crypto scope_guard)
