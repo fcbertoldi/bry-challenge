@@ -11,6 +11,10 @@ int msgDigest(std::istream& istream, std::vector<unsigned char>& outDigest);
 
 int msgDigestHex(std::istream& istream, std::string& hexDigest);
 
+int cmsSign(
+    std::istream& p12File, const char* passphrase, std::istream& data, std::ostream& out
+);
+
 }
 
 #endif // BRY_CHALLENGE_CORE_MSG_DIGEST_H

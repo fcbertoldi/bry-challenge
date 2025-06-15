@@ -1,4 +1,4 @@
-#include "bry_challenge/core/msg_digest.h"
+#include "bry_challenge/core.h"
 
 #include <iomanip>
 #include <iostream>

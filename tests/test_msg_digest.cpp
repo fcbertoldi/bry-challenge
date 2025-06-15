@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "bry_challenge/core/msg_digest.h"
+#include "bry_challenge/core.h"
 
 #include <catch2/catch_test_macros.hpp>
 
