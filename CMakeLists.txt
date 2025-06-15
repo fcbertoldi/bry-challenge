@@ -16,4 +16,4 @@ target_include_directories(core PUBLIC include)
 target_link_libraries(core PUBLIC OpenSSL::Crypto PRIVATE scope_guard)
 
 add_executable(bry-checksum src/bry_checksum/main.cpp)
-target_link_libraries(bry-checksum PRIVATE core OpenSSL::Crypto scope_guard)
+target_link_libraries(bry-checksum PRIVATE core)

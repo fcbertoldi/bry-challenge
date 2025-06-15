@@ -4,10 +4,6 @@
 #include <fstream>
 #include <vector>
 #include <iomanip>
-#include <openssl/evp.h>
-#include <openssl/err.h>
-#include <openssl/sha.h>
-#include <scope_guard/scope_guard.hpp>
 
 namespace {
 
