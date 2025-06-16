@@ -102,5 +102,54 @@ int cmsSign(
     return ret;
 }
 
+int cmsSign(
+    const unsigned char* p12Data, std::size_t p12Length, const char* passphrase, const char* data, char** out, std::size_t* outLength
+) {
+    if (!p12Data || p12Length == 0 || !passphrase || !data || !out) {
+        std::cerr << "Invalid input parameters.\n";
+        return 1;
+    }
+
+    const unsigned char* p12DataPtr = p12Data;
+    PKCS12* p12 = d2i_PKCS12(nullptr, &p12DataPtr, static_cast<long>(p12Length));
+    if (!p12) {
+        std::cerr << "Failed to parse PKCS#12 data\n";
+        return 1;
+    }
+
+    BIO* dataBio = BIO_new_mem_buf(data, static_cast<int>(strlen(data)));
+    if (!dataBio) {
+        std::cerr << "Failed to create BIO for data\n";
+        PKCS12_free(p12);
+        return 1;
+    }
+
+    BIO* outBio = BIO_new(BIO_s_mem());
+    if (!outBio) {
+        std::cerr << "Failed to create BIO for output\n";
+        BIO_free(dataBio);
+        PKCS12_free(p12);
+        return 1;
+    }
+
+    int ret = ::cmsSign(p12, passphrase, dataBio, outBio);
+    if (ret == 0) {
+        BUF_MEM* bptr = nullptr;
+        *outLength = BIO_get_mem_data(outBio, out);
+        BIO_get_mem_ptr(outBio, &bptr);
+        BIO_set_close(outBio, BIO_NOCLOSE);
+        bptr->data = nullptr;    // orphan buffer (you own it now)
+        BUF_MEM_free(bptr);      // free only the BUF_MEM struct
+    } else {
+        *out = nullptr;
+        *outLength = 0;
+    }
+
+    BIO_free(outBio);  // won't free buffer due to BIO_NOCLOSE
+    BIO_free(dataBio);
+    PKCS12_free(p12);
+
+    return ret;
+}
 
 }
