@@ -20,3 +20,7 @@ add_subdirectory(tests)
 
 add_executable(bry-checksum src/bry_checksum/main.cpp)
 target_link_libraries(bry-checksum PRIVATE core)
+
+add_executable(bry-signature src/bry_signature/main.cpp)
+target_link_libraries(bry-signature PRIVATE core)
+
