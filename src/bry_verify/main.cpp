@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
         << "\nInformações da assinatura:\n"
         << "\nNome do signatário: " << signInfo.commonName
         << "\nData da assinatura: " << std::asctime(&signInfo.signingTime)
-        << "\nHash do documento: " << signInfo.encapContentInfoHex
+        << "Hash do documento: " << signInfo.encapContentInfoHex
         << "\nNome do algoritmo: " << signInfo.digestAlgorithm
         << "\n\n";
 
