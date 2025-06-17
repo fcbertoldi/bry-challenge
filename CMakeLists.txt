@@ -22,6 +22,9 @@ target_link_libraries(bry-checksum PRIVATE core)
 add_executable(bry-signature src/bry_signature/main.cpp)
 target_link_libraries(bry-signature PRIVATE core)
 
+add_executable(bry-verify src/bry_verify/main.cpp)
+target_link_libraries(bry-verify PRIVATE core)
+
 add_executable(tests tests/tests.cpp)
 target_compile_definitions(tests PRIVATE DATA_DIR="${PROJECT_SOURCE_DIR}/data")
 target_link_libraries(tests PRIVATE core Catch2::Catch2WithMain)
