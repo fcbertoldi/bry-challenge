@@ -16,11 +16,15 @@ add_library(core STATIC src/core/msg_digest.cpp src/core/cms_signature.cpp)
 target_include_directories(core PUBLIC include)
 target_link_libraries(core PUBLIC OpenSSL::Crypto PRIVATE scope_guard)
 
-add_subdirectory(tests)
-
 add_executable(bry-checksum src/bry_checksum/main.cpp)
 target_link_libraries(bry-checksum PRIVATE core)
 
 add_executable(bry-signature src/bry_signature/main.cpp)
 target_link_libraries(bry-signature PRIVATE core)
 
+add_executable(tests tests/tests.cpp)
+target_compile_definitions(tests PRIVATE DATA_DIR="${PROJECT_SOURCE_DIR}/data")
+target_link_libraries(tests PRIVATE core Catch2::Catch2WithMain)
+include(CTest)
+include(Catch)
+catch_discover_tests(tests)

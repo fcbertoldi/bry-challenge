@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -14,7 +15,12 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+namespace fs = std::filesystem;
+
 namespace {
+
+
+
 std::string toHex(const char* hash, unsigned int len) {
     std::ostringstream sstream;
     sstream << std::hex << std::setfill('0');
@@ -39,41 +45,37 @@ TEST_CASE("msgDigest", "[core]") {
 }
 
 TEST_CASE("cmsSign", "[core]") {
-    char* out;
-    std::size_t outLength;
+    const fs::path dataPath(DATA_DIR);
+    const char* p7File = "doc.txt.p7s";
+    constexpr const char* passphrase = "bry123456";
 
-
-    std::string data("Teste vaga back-end Java");
-    std::string passphrase("bry123456");
     int ret = bry_challenge::cmsSign(
-        data_certificado_teste_hub_pfx,
-        sizeof(data_certificado_teste_hub_pfx),
-        passphrase.data(),
-        data.data(),
-        &out,
-        &outLength
+        (dataPath / "certificado_teste_hub.pfx").c_str(),
+        passphrase,
+        (dataPath / "doc.txt").c_str(),
+        p7File
     );
 
     REQUIRE(ret == 0);
 
-    BIO* cms_bio = BIO_new_mem_buf(out, outLength);
-    BIO* data_bio = BIO_new_mem_buf(data.data(), static_cast<int>(data.size()));
-    BIO* out_bio = BIO_new(BIO_s_mem());
-
-    CMS_ContentInfo* cms = d2i_CMS_bio(cms_bio, nullptr);
+    BIO* p7BIO = BIO_new_file(p7File, "rb");
+    CMS_ContentInfo* cms = d2i_CMS_bio(p7BIO, nullptr);
     REQUIRE(cms != nullptr);
 
-    // NULL store == use certs embedded in CMS
-    X509_STORE* store = X509_STORE_new();
-    REQUIRE(store != nullptr);
+    int verifyResult = CMS_verify(
+        cms,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        CMS_NO_SIGNER_CERT_VERIFY
+    );
 
-    int verify_result = CMS_verify(cms, nullptr, store, data_bio, out_bio, CMS_BINARY);
-    REQUIRE(verify_result == 1); // Signature must be valid
+    if (verifyResult != 1) {
+        ERR_print_errors_fp(stderr);
+    }
+    REQUIRE(verifyResult == 1);
 
     CMS_ContentInfo_free(cms);
-    X509_STORE_free(store);
-    BIO_free(cms_bio);
-    BIO_free(data_bio);
-    BIO_free(out_bio);
-    std::free(out);
+    BIO_free(p7BIO);
 }

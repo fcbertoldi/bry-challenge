@@ -14,11 +14,13 @@ int cmsSign(PKCS12* p12, const char* passphrase, BIO* data, BIO* out) {
     EVP_PKEY *pkey = nullptr;
     X509 *cert = nullptr;
     STACK_OF(X509) *ca = nullptr;
+    EVP_MD* msgDigest = nullptr;
 
     CMS_ContentInfo *cms = nullptr;
-    int flags = CMS_BINARY;
+    int flags = CMS_BINARY | CMS_PARTIAL;
 
     auto cleanupGuard = sg::make_scope_guard([&]{
+        EVP_MD_free(msgDigest);
         CMS_ContentInfo_free(cms);
         X509_free(cert);
         EVP_PKEY_free(pkey);
@@ -30,9 +32,25 @@ int cmsSign(PKCS12* p12, const char* passphrase, BIO* data, BIO* out) {
         return ret;
     }
 
-    cms = CMS_sign(cert, pkey, nullptr, data, flags);
+    cms = CMS_sign(nullptr, nullptr, nullptr, data, flags);
     if (!cms) {
         std::cerr << "Error signing data.\n";
+        return ret;
+    }
+
+    msgDigest = EVP_MD_fetch(nullptr, "SHA-512", nullptr);
+    if (!msgDigest) {
+        std::cerr << "EVP_MD_fetch could not find SHA-512.\n";
+        return ret;
+    }
+
+    if (!CMS_add1_signer(cms, cert, pkey, msgDigest, 0)) {
+        std::cerr << "CMS_add1_signer failed.\n";
+        return ret;
+    }
+
+    if (!CMS_final(cms, data, nullptr, flags)) {
+        std::cerr << "CMS_final failed.\n";
         return ret;
     }
 
