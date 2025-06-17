@@ -55,6 +55,23 @@ void cmsSign(PKCS12* p12, const char* passphrase, BIO* data, BIO* out) {
     }
 }
 
+bool cmsVerify(BIO* signedBIO) {
+    PKCS7* p7 = nullptr;
+    auto cleanupGuard = sg::make_scope_guard([&]{
+        PKCS7_free(p7);
+    });
+
+    p7 = d2i_PKCS7_bio(signedBIO, nullptr);
+    if (!p7) {
+        throw bry_challenge::BryError("Error while parsing signed file.");
+    }
+
+    int verifyResult = PKCS7_verify(
+        p7, nullptr, nullptr, nullptr, nullptr, PKCS7_NOVERIFY
+    );
+    return verifyResult == 1;
+}
+
 }
 
 namespace bry_challenge {
@@ -148,6 +165,23 @@ void cmsSign(
     BIO_free(outBio);  // won't free buffer due to BIO_NOCLOSE
     BIO_free(dataBio);
     PKCS12_free(p12);
+}
+
+bool cmsVerify(const char* signedFile) {
+    int ret = 1;
+    BIO* p7BIO = nullptr;
+
+    auto cleanupGuard = sg::make_scope_guard([&]{
+        BRY_LOG_OPENSSL_ERROR(ret != 0);
+        BIO_free(p7BIO);
+    });
+
+    p7BIO = BIO_new_file(signedFile, "rb");
+    if (!p7BIO) {
+        throw BryError("Could not open signed file");
+    }
+
+    return ::cmsVerify(p7BIO);
 }
 
 }

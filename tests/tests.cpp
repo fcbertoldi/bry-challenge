@@ -8,8 +8,9 @@
 #include "bry_challenge/core.h"
 
 #include <openssl/cms.h>
-#include <openssl/x509.h>
 #include <openssl/err.h>
+#include <openssl/pkcs7.h>
+#include <openssl/x509.h>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -17,7 +18,7 @@ namespace fs = std::filesystem;
 
 namespace {
 
-
+const fs::path dataPath(DATA_DIR);
 
 std::string toHex(const char* hash, unsigned int len) {
     std::ostringstream sstream;
@@ -43,35 +44,36 @@ TEST_CASE("msgDigest", "[core]") {
 }
 
 TEST_CASE("cmsSign", "[core]") {
-    const fs::path dataPath(DATA_DIR);
-    const char* p7File = "doc.txt.p7s";
+    const char* signedFile = "doc.txt.p7s";
     constexpr const char* passphrase = "bry123456";
+    auto certFile = dataPath / "certificado_teste_hub.pfx";
+    auto dataFile = dataPath / "doc.txt";
 
     REQUIRE_NOTHROW(bry_challenge::cmsSign(
-        (dataPath / "certificado_teste_hub.pfx").c_str(),
+        certFile.c_str(),
         passphrase,
-        (dataPath / "doc.txt").c_str(),
-        p7File
+        dataFile.c_str(),
+        signedFile
     ));
 
-    BIO* p7BIO = BIO_new_file(p7File, "rb");
-    CMS_ContentInfo* cms = d2i_CMS_bio(p7BIO, nullptr);
-    REQUIRE(cms != nullptr);
+    BIO* p7BIO = BIO_new_file(signedFile, "rb");
+    PKCS7* p7 = d2i_PKCS7_bio(p7BIO, nullptr);
+    REQUIRE(p7 != nullptr);
 
-    int verifyResult = CMS_verify(
-        cms,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        CMS_NO_SIGNER_CERT_VERIFY
+    int verifyResult = PKCS7_verify(
+        p7, nullptr, nullptr, nullptr, nullptr, PKCS7_NOVERIFY
     );
-
-    if (verifyResult != 1) {
-        ERR_print_errors_fp(stderr);
-    }
     REQUIRE(verifyResult == 1);
 
-    CMS_ContentInfo_free(cms);
+    // CMS_ContentInfo_free(cms);
+    PKCS7_free(p7);
     BIO_free(p7BIO);
+}
+
+TEST_CASE("cmsVerify", "[core]") {
+    auto signedFile = dataPath / "doc.txt.p7s";
+
+    bool validSignature = false;
+    REQUIRE_NOTHROW(validSignature = bry_challenge::cmsVerify(signedFile.c_str()));
+    REQUIRE(validSignature);
 }

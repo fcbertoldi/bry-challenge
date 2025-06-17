@@ -25,6 +25,8 @@ void cmsSign(
     const unsigned char* p12Data, std::size_t p12Length, const char* passphrase, const char* data, char** out, std::size_t* outLength
 );
 
+bool cmsVerify(const char* signedFile);
+
 }
 
 #endif // BRY_CHALLENGE_CORE_MSG_DIGEST_H
