@@ -1,4 +1,5 @@
 #include "bry_challenge/core.h"
+#include "core_utils.h"
 #include <iostream>
 #include <openssl/bio.h>
 #include <openssl/cms.h>
@@ -9,7 +10,7 @@
 
 namespace {
 
-int cmsSign(PKCS12* p12, const char* passphrase, BIO* data, BIO* out) {
+void cmsSign(PKCS12* p12, const char* passphrase, BIO* data, BIO* out) {
     int ret = 1;
     EVP_PKEY *pkey = nullptr;
     X509 *cert = nullptr;
@@ -28,59 +29,47 @@ int cmsSign(PKCS12* p12, const char* passphrase, BIO* data, BIO* out) {
     });
 
     if (!PKCS12_parse(p12, passphrase, &pkey, &cert, &ca)) {
-        std::cerr << "Error parsing PKCS#12 file\n";
-        return ret;
+        throw bry_challenge::BryError("Error parsing PKCS#12 file");
     }
 
     cms = CMS_sign(nullptr, nullptr, nullptr, data, flags);
     if (!cms) {
-        std::cerr << "Error signing data.\n";
-        return ret;
+        throw bry_challenge::BryError("Error signing data");
     }
 
     msgDigest = EVP_MD_fetch(nullptr, "SHA-512", nullptr);
     if (!msgDigest) {
-        std::cerr << "EVP_MD_fetch could not find SHA-512.\n";
-        return ret;
+        throw bry_challenge::BryError("EVP_MD_fetch could not find SHA-512");
     }
 
     if (!CMS_add1_signer(cms, cert, pkey, msgDigest, 0)) {
-        std::cerr << "CMS_add1_signer failed.\n";
-        return ret;
+        throw bry_challenge::BryError("CMS_add1_signer failed");
     }
 
     if (!CMS_final(cms, data, nullptr, flags)) {
-        std::cerr << "CMS_final failed.\n";
-        return ret;
+        throw bry_challenge::BryError("CMS_final failed");
     }
 
     if (!i2d_CMS_bio(out, cms)) {
-        std::cerr << "Error writing signed CMS file.\n";
-        return ret;
+        throw bry_challenge::BryError("Error writing signed CMS file");
     }
-
-
-    return 0;
 }
 
 }
 
 namespace bry_challenge {
 
-int cmsSign(
+void cmsSign(
     const char* p12File, const char* passphrase, const char* dataFile, const char* out
 ) {
-    int ret = 0;
+    int ret = 1;
     BIO* p12BIO = nullptr;
     BIO* dataBIO = nullptr;
     BIO* outBIO = nullptr;
     PKCS12* p12 = nullptr;
 
     auto cleanupGuard = sg::make_scope_guard([&]{
-        if (ret != 0) {
-            ERR_print_errors_fp(stderr);
-        }
-
+        BRY_LOG_OPENSSL_ERROR(ret != 0);
         PKCS12_free(p12);
         BIO_free(p12BIO);
         BIO_free(dataBIO);
@@ -90,84 +79,75 @@ int cmsSign(
     // Create BIO from file
     p12BIO = BIO_new_file(p12File, "rb");
     if (!p12BIO) {
-        std::cerr << "Error: Failed to create new PKCS12 BIO file";
-        ret = 1;
-        return ret;
+        throw BryError("Error: Failed to create new PKCS12 BIO file");
     }
 
     p12 = d2i_PKCS12_bio(p12BIO, nullptr);
     if (!p12) {
-        std::cerr << "Error: Failed to read PKCS12 file";
-        ret = 1;
-        return ret;
+        throw BryError("Error: Failed to read PKCS12 file");
     }
 
     dataBIO = BIO_new_file(dataFile, "r");
     if (!dataBIO) {
-        std::cerr << "Error: Failed to create new data BIO file";
-        ret = 1;
-        return ret;
+        throw BryError("Error: Failed to create new data BIO file");
     }
 
     outBIO = BIO_new_file(out, "wb");
     if (!dataBIO) {
-        std::cerr << "Error: Failed to create new out BIO file";
-        ret = 1;
-        return ret;
+        throw BryError("Error: Failed to create new out BIO file");
     }
 
-    ret = ::cmsSign(p12, passphrase, dataBIO, outBIO);
-    return ret;
+    ::cmsSign(p12, passphrase, dataBIO, outBIO);
+    ret = 0;
 }
 
-int cmsSign(
+void cmsSign(
     const unsigned char* p12Data, std::size_t p12Length, const char* passphrase, const char* data, char** out, std::size_t* outLength
 ) {
     if (!p12Data || p12Length == 0 || !passphrase || !data || !out) {
-        std::cerr << "Invalid input parameters.\n";
-        return 1;
+        throw BryError("Invalid input parameters");
     }
 
     const unsigned char* p12DataPtr = p12Data;
     PKCS12* p12 = d2i_PKCS12(nullptr, &p12DataPtr, static_cast<long>(p12Length));
     if (!p12) {
-        std::cerr << "Failed to parse PKCS#12 data\n";
-        return 1;
+        throw BryError("Failed to parse PKCS#12 data");
     }
 
     BIO* dataBio = BIO_new_mem_buf(data, static_cast<int>(strlen(data)));
     if (!dataBio) {
-        std::cerr << "Failed to create BIO for data\n";
         PKCS12_free(p12);
-        return 1;
+        throw BryError("Failed to create BIO for data");
     }
 
     BIO* outBio = BIO_new(BIO_s_mem());
     if (!outBio) {
-        std::cerr << "Failed to create BIO for output\n";
         BIO_free(dataBio);
         PKCS12_free(p12);
-        return 1;
+        throw BryError("Failed to create BIO for output");
     }
 
-    int ret = ::cmsSign(p12, passphrase, dataBio, outBio);
-    if (ret == 0) {
+    ::cmsSign(p12, passphrase, dataBio, outBio);
+
+    try {
+        ::cmsSign(p12, passphrase, dataBio, outBio);
+    } catch (const std::exception& err) {
         BUF_MEM* bptr = nullptr;
         *outLength = BIO_get_mem_data(outBio, out);
         BIO_get_mem_ptr(outBio, &bptr);
         BIO_set_close(outBio, BIO_NOCLOSE);
         bptr->data = nullptr;    // orphan buffer (you own it now)
         BUF_MEM_free(bptr);      // free only the BUF_MEM struct
-    } else {
-        *out = nullptr;
-        *outLength = 0;
+
+        throw;
     }
+
+    *out = nullptr;
+    *outLength = 0;
 
     BIO_free(outBio);  // won't free buffer due to BIO_NOCLOSE
     BIO_free(dataBio);
     PKCS12_free(p12);
-
-    return ret;
 }
 
 }

@@ -1,4 +1,5 @@
 #include "bry_challenge/core.h"
+#include "core_utils.h"
 
 #include <iomanip>
 #include <iostream>
@@ -28,40 +29,33 @@ std::string toHex(const unsigned char* hash, unsigned int len) {
 
 namespace bry_challenge {
 
-int msgDigest(std::istream& istream, std::vector<unsigned char>& outDigest) {
+BryError::BryError(const std::string& message) : std::runtime_error(message) {}
+
+void msgDigest(std::istream& istream, std::vector<unsigned char>& outDigest) {
     int ret = 1;
-    if (!istream) {
-        std::cerr << "Istream error \n";
-        return ret;
-    }
 
     EVP_MD* msgDigest = nullptr;
     EVP_MD_CTX* ctx = nullptr;
 
     auto ctxGuard = sg::make_scope_guard([&]{
-        if (ret != 0) {
-            ERR_print_errors_fp(stderr);
-        }
+        BRY_LOG_OPENSSL_ERROR(ret != 0);
         EVP_MD_free(msgDigest);
         EVP_MD_CTX_free(ctx);
     });
 
     msgDigest = EVP_MD_fetch(nullptr, "SHA-512", nullptr);
     if (!msgDigest) {
-        std::cerr << "EVP_MD_fetch could not find SHA-512.\n";
-        return ret;
+        throw BryError("EVP_MD_fetch could not find SHA-512");
     }
 
     // Initialize OpenSSL digest context
     ctx = EVP_MD_CTX_new();
     if (!ctx) {
-        std::cerr << "Error: Failed to create digest context.\n";
-        return ret;
+        throw BryError("Error: Failed to create digest context");
     }
 
     if (EVP_DigestInit_ex(ctx, msgDigest, nullptr) != 1) {
-        std::cerr << "Error: EVP_DigestInit_ex failed.\n";
-        return ret;
+        throw BryError("Error: EVP_DigestInit_ex failed");
     }
 
     std::vector<char> buffer(BUFFER_SIZE);
@@ -69,38 +63,29 @@ int msgDigest(std::istream& istream, std::vector<unsigned char>& outDigest) {
         istream.read(buffer.data(), buffer.size());
         auto bytesRead = istream.gcount();
         if (bytesRead > 0 && EVP_DigestUpdate(ctx, buffer.data(), bytesRead) != 1) {
-            std::cerr << "Error: EVP_DigestUpdate failed.\n";
-            return ret;
+            throw BryError("Error: EVP_DigestUpdate failed");
         }
     }
 
     const int digestLen = EVP_MD_get_size(msgDigest);
     if (digestLen < 0) {
-        std::cerr << "EVP_MD_get_size returned invalid size.\n";
-        return ret;
+        throw BryError("EVP_MD_get_size returned invalid size");
     }
 
     outDigest.resize(digestLen);
     unsigned int hashLen = 0;
 
     if (EVP_DigestFinal_ex(ctx, outDigest.data(), &hashLen) != 1) {
-        std::cerr << "Error: EVP_DigestFinal_ex failed.\n";
-        return ret;
+        throw BryError("Error: EVP_DigestFinal_ex failed");
     }
 
     outDigest.resize(hashLen);
-
-    ret = 0;
-    return ret;
 }
 
-int msgDigestHex(std::istream& istream, std::string& hexDigest) {
+void msgDigestHex(std::istream& istream, std::string& hexDigest) {
     std::vector<unsigned char> outDigest;
-    if (int res = msgDigest(istream, outDigest) != 0) {
-        return res;
-    }
-
+    msgDigest(istream, outDigest);
     hexDigest = toHex(outDigest.data(), outDigest.size());
-    return 0;
 }
+
 }

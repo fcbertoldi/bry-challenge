@@ -8,12 +8,9 @@
 
 
 int main(int argc, char* argv[]) {
-
-    int ret = 1;
-
     if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " <file_path>\n";
-        return ret;
+        return 1;
     }
 
     const char* filePath = argv[1];
@@ -21,18 +18,19 @@ int main(int argc, char* argv[]) {
 
     if (!file) {
         std::cerr << "Error: Could not open file: " << filePath << '\n';
-        return ret;
+        return 1;
     }
 
     std::vector<unsigned char> hash;
     std::string hexDigest;
-    ret = bry_challenge::msgDigestHex(file, hexDigest);
-    if (ret != 0) {
-        return ret;
+    try {
+        bry_challenge::msgDigestHex(file, hexDigest);
+    } catch (const std::exception& err) {
+        std::cerr << "Error: " << err.what() << '\n';
+        return 1;
     }
 
     std::cout << hexDigest << "  " << filePath << std::endl;
 
-    ret = 0;
-    return ret;
+    return 0;
 }

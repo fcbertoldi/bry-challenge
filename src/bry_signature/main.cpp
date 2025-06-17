@@ -40,6 +40,11 @@ int main(int argc, char* argv[]) {
         return ret;
     }
 
-    ret = bry_challenge::cmsSign(p12File, passphrase.data(), dataFile, outFile);
-    return ret;
+    try {
+        bry_challenge::cmsSign(p12File, passphrase.data(), dataFile, outFile);
+    } catch (const std::exception& err) {
+        std::cerr << "Error: " << err.what() << '\n';
+        return 1;
+    }
+    return 0;
 }

@@ -33,8 +33,8 @@ std::string toHex(const char* hash, unsigned int len) {
 TEST_CASE("msgDigest", "[core]") {
     std::istringstream data("Teste vaga back-end Java");
     std::string hexDigest;
-    bry_challenge::msgDigestHex(data, hexDigest);
 
+    REQUIRE_NOTHROW(bry_challenge::msgDigestHex(data, hexDigest));
     const std::string expected(
         "dc1a7de77c59a29f366a4b154b03ad7d99013e36e08beb50d976358bea7b045884fe72111b27cf7d6302916b2691ac7696c1637e1ab44584d8d6613825149e35"
     );
@@ -47,14 +47,12 @@ TEST_CASE("cmsSign", "[core]") {
     const char* p7File = "doc.txt.p7s";
     constexpr const char* passphrase = "bry123456";
 
-    int ret = bry_challenge::cmsSign(
+    REQUIRE_NOTHROW(bry_challenge::cmsSign(
         (dataPath / "certificado_teste_hub.pfx").c_str(),
         passphrase,
         (dataPath / "doc.txt").c_str(),
         p7File
-    );
-
-    REQUIRE(ret == 0);
+    ));
 
     BIO* p7BIO = BIO_new_file(p7File, "rb");
     CMS_ContentInfo* cms = d2i_CMS_bio(p7BIO, nullptr);
