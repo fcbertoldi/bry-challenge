@@ -6,8 +6,6 @@
 #include <vector>
 
 #include "bry_challenge/core.h"
-#include "p12_data.h"
-#include "signed_data.h"
 
 #include <openssl/cms.h>
 #include <openssl/x509.h>
