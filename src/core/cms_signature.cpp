@@ -1,6 +1,9 @@
 #include "bry_challenge/core.h"
 #include "core_utils.h"
+#include <iomanip>
 #include <iostream>
+#include <sstream>
+#include <string>
 #include <openssl/bio.h>
 #include <openssl/cms.h>
 #include <openssl/err.h>
@@ -55,7 +58,61 @@ void cmsSign(PKCS12* p12, const char* passphrase, BIO* data, BIO* out) {
     }
 }
 
-bool cmsVerify(BIO* signedBIO) {
+std::string asn1ToHex(const ASN1_OCTET_STRING* str) {
+    std::ostringstream oss;
+    for (int i = 0; i < str->length; ++i) {
+        oss << std::hex << std::setfill('0') << std::setw(2)
+            << static_cast<int>(str->data[i]);
+    }
+    return oss.str();
+}
+
+// Helper: Convert ASN1_TIME to readable string
+void extractX509Data(PKCS7* p7, bry_challenge::SignInfo& signInfo) {
+    PKCS7_SIGNED* signedData = p7->d.sign;
+
+    // === Certificates: Print CN ===
+    STACK_OF(X509)* certs = signedData->cert;
+    for (int i = 0; i < sk_X509_num(certs); ++i) {
+        X509* cert = sk_X509_value(certs, i);
+        X509_NAME* subj = X509_get_subject_name(cert);
+        int cn_index = X509_NAME_get_index_by_NID(subj, NID_commonName, -1);
+        if (cn_index >= 0) {
+            X509_NAME_ENTRY* cn_entry = X509_NAME_get_entry(subj, cn_index);
+            ASN1_STRING* cn_asn1 = X509_NAME_ENTRY_get_data(cn_entry);
+            unsigned char* cn_utf8 = nullptr;
+            ASN1_STRING_to_UTF8(&cn_utf8, cn_asn1);
+            signInfo.commonName = reinterpret_cast<char*>(cn_utf8);
+            OPENSSL_free(cn_utf8);
+        }
+    }
+
+    // === Signer Info ===
+    STACK_OF(PKCS7_SIGNER_INFO)* signers = signedData->signer_info;
+    PKCS7_SIGNER_INFO* si = sk_PKCS7_SIGNER_INFO_value(signers, 0);
+
+    // -- Digest Algorithm --
+    int digest_nid = OBJ_obj2nid(si->digest_alg->algorithm);
+    signInfo.digestAlgorithm = OBJ_nid2ln(digest_nid);
+
+    // -- Signing Time (if present) --
+    ASN1_TYPE* signing_time_asn1 = PKCS7_get_signed_attribute(si, NID_pkcs9_signingTime);
+    if (signing_time_asn1 && signing_time_asn1->type == V_ASN1_UTCTIME) {
+        ASN1_TIME* signingTime = signing_time_asn1->value.utctime;
+        ASN1_TIME_to_tm(signingTime, &signInfo.signingTime);
+    }
+
+    // === Encapsulated content (encapContentInfo) ===
+    if (signedData->contents->d.other->type == V_ASN1_OCTET_STRING) {
+        ASN1_OCTET_STRING* content = signedData->contents->d.other->value.octet_string;
+        signInfo.encapContentInfoHex = asn1ToHex(content);
+    } else if (signedData->contents->d.data) {
+        ASN1_OCTET_STRING* content = signedData->contents->d.data;
+        signInfo.encapContentInfoHex = asn1ToHex(content);
+    }
+}
+
+bool cmsVerify(BIO* signedBIO, bry_challenge::SignInfo& signInfo) {
     PKCS7* p7 = nullptr;
     auto cleanupGuard = sg::make_scope_guard([&]{
         PKCS7_free(p7);
@@ -65,6 +122,13 @@ bool cmsVerify(BIO* signedBIO) {
     if (!p7) {
         throw bry_challenge::BryError("Error while parsing signed file.");
     }
+
+    STACK_OF(X509)* certs = p7->d.sign->cert;
+    if (!certs) {
+        throw bry_challenge::BryError("No certificates found in SignedData");
+    }
+
+    ::extractX509Data(p7, signInfo);
 
     int verifyResult = PKCS7_verify(
         p7, nullptr, nullptr, nullptr, nullptr, PKCS7_NOVERIFY
@@ -167,7 +231,7 @@ void cmsSign(
     PKCS12_free(p12);
 }
 
-bool cmsVerify(const char* signedFile) {
+bool cmsVerify(const char* signedFile, SignInfo& signInfo) {
     int ret = 1;
     BIO* p7BIO = nullptr;
 
@@ -181,7 +245,7 @@ bool cmsVerify(const char* signedFile) {
         throw BryError("Could not open signed file");
     }
 
-    return ::cmsVerify(p7BIO);
+    return ::cmsVerify(p7BIO, signInfo);
 }
 
 }

@@ -71,9 +71,18 @@ TEST_CASE("cmsSign", "[core]") {
 }
 
 TEST_CASE("cmsVerify", "[core]") {
-    auto signedFile = dataPath / "doc.txt.p7s";
+    const auto signedFile = dataPath / "doc.txt.p7s";
+
+    const std::string expCommonName = "HUB2 TESTES";
+    const std::string expContentInfo = "54657374652076616761206261636b2d656e64204a617661";
+    const std::string expAlgo = "sha512";
 
     bool validSignature = false;
-    REQUIRE_NOTHROW(validSignature = bry_challenge::cmsVerify(signedFile.c_str()));
+    bry_challenge::SignInfo signInfo;
+    REQUIRE_NOTHROW(validSignature = bry_challenge::cmsVerify(signedFile.c_str(), signInfo));
+
     REQUIRE(validSignature);
+    REQUIRE(signInfo.commonName == expCommonName);
+    REQUIRE(signInfo.encapContentInfoHex == expContentInfo);
+    REQUIRE(signInfo.digestAlgorithm == expAlgo);
 }
