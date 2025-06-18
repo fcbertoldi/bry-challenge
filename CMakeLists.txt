@@ -16,13 +16,13 @@ add_library(core STATIC src/core/msg_digest.cpp src/core/cms_signature.cpp)
 target_include_directories(core PUBLIC include)
 target_link_libraries(core PUBLIC OpenSSL::Crypto PRIVATE scope_guard)
 
-add_executable(bry-checksum src/bry_checksum/main.cpp)
+add_executable(bry-checksum src/bry_checksum.cpp)
 target_link_libraries(bry-checksum PRIVATE core)
 
-add_executable(bry-signature src/bry_signature/main.cpp)
+add_executable(bry-signature src/bry_signature.cpp)
 target_link_libraries(bry-signature PRIVATE core)
 
-add_executable(bry-verify src/bry_verify/main.cpp)
+add_executable(bry-verify src/bry_verify.cpp)
 target_link_libraries(bry-verify PRIVATE core)
 
 add_executable(tests tests/tests.cpp)
