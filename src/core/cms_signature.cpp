@@ -183,19 +183,18 @@ void cmsSign(
 }
 
 void cmsSign(
-    const unsigned char* p12Data, std::size_t p12Length, const char* passphrase, const char* data, char** out, std::size_t* outLength
+    const unsigned char* p12Data, std::size_t p12Length, const char* passphrase, const char* data, std::size_t dataLength, char** out, std::size_t* outLength
 ) {
     if (!p12Data || p12Length == 0 || !passphrase || !data || !out) {
         throw BryError("Invalid input parameters");
     }
 
-    const unsigned char* p12DataPtr = p12Data;
-    PKCS12* p12 = d2i_PKCS12(nullptr, &p12DataPtr, static_cast<long>(p12Length));
+    PKCS12* p12 = d2i_PKCS12(nullptr, &p12Data, static_cast<long>(p12Length));
     if (!p12) {
         throw BryError("Failed to parse PKCS#12 data");
     }
 
-    BIO* dataBio = BIO_new_mem_buf(data, static_cast<int>(strlen(data)));
+    BIO* dataBio = BIO_new_mem_buf(data, dataLength);
     if (!dataBio) {
         PKCS12_free(p12);
         throw BryError("Failed to create BIO for data");
@@ -208,23 +207,21 @@ void cmsSign(
         throw BryError("Failed to create BIO for output");
     }
 
-    ::cmsSign(p12, passphrase, dataBio, outBio);
-
     try {
         ::cmsSign(p12, passphrase, dataBio, outBio);
     } catch (const std::exception& err) {
-        BUF_MEM* bptr = nullptr;
-        *outLength = BIO_get_mem_data(outBio, out);
-        BIO_get_mem_ptr(outBio, &bptr);
-        BIO_set_close(outBio, BIO_NOCLOSE);
-        bptr->data = nullptr;    // orphan buffer (you own it now)
-        BUF_MEM_free(bptr);      // free only the BUF_MEM struct
+        *out = nullptr;
+        *outLength = 0;
 
         throw;
     }
 
-    *out = nullptr;
-    *outLength = 0;
+    BUF_MEM* bptr = nullptr;
+    *outLength = BIO_get_mem_data(outBio, out);
+    BIO_get_mem_ptr(outBio, &bptr);
+    BIO_set_close(outBio, BIO_NOCLOSE);
+    bptr->data = nullptr;    // orphan buffer (you own it now)
+    BUF_MEM_free(bptr);      // free only the BUF_MEM struct
 
     BIO_free(outBio);  // won't free buffer due to BIO_NOCLOSE
     BIO_free(dataBio);
