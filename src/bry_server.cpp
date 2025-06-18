@@ -46,6 +46,7 @@ std::string toISO8601(const std::tm& tm) {
 class VerifyPartHandler : public PartHandler {
 public:
     void handlePart(const MessageHeader& header, std::istream& stream) override {
+        std::cout << "Content-Disposition: " << header.get("Content-Disposition", "") << std::endl;
         if (!header.has("Content-Disposition")) {
             return;
         }
@@ -62,13 +63,12 @@ public:
 class SignPartHandler : public PartHandler {
 public:
     void handlePart(const MessageHeader& header, std::istream& stream) override {
+        std::cout << "Content-Disposition: " << header.get("Content-Disposition", "") << std::endl;
         if (!header.has("Content-Disposition")) {
             return;
         }
         auto name = ::getPartValue(header);
-        if (name == "pkcs12_passwd") {
-            pkcs12Passwd = std::string(std::istream_iterator<char>(stream), std::istream_iterator<char>());
-        } else if (name == "pkcs12") {
+        if (name == "pkcs12") {
             pkcs12 = std::vector<char>(std::istream_iterator<char>(stream), std::istream_iterator<char>());
         } else if (name == "data") {
             data = std::vector<char>(std::istream_iterator<char>(stream), std::istream_iterator<char>());
@@ -77,7 +77,6 @@ public:
 
     std::vector<char> pkcs12;
     std::vector<char> data;
-    std::string pkcs12Passwd;
 };
 
 class VerifyHandler : public HTTPRequestHandler {
@@ -154,8 +153,9 @@ public:
         try {
             SignPartHandler partHandler;
             HTMLForm form(request, request.stream(), partHandler);
+            std::string pkcs12Passwd = form.get("pkcs12_passwd", "");
 
-            if (partHandler.pkcs12.empty() || partHandler.data.empty() || partHandler.pkcs12Passwd.empty()) {
+            if (partHandler.pkcs12.empty() || partHandler.data.empty() || pkcs12Passwd.empty()) {
                 response.setStatus(HTTPResponse::HTTP_BAD_REQUEST);
                 ostr << "Missing parameters";
                 return;
@@ -166,7 +166,7 @@ public:
             bry_challenge::cmsSign(
                 reinterpret_cast<unsigned char*>(partHandler.pkcs12.data()),
                 partHandler.pkcs12.size(),
-                partHandler.pkcs12Passwd.c_str(),
+                pkcs12Passwd.c_str(),
                 partHandler.data.data(),
                 partHandler.data.size(),
                 &out,
