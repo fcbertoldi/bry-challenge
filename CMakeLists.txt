@@ -13,7 +13,7 @@ find_package(Poco REQUIRED COMPONENTS Foundation Net Util)
 
 include_directories(include)
 
-add_library(core STATIC src/core/msg_digest.cpp src/core/cms_signature.cpp)
+add_library(core STATIC src/core/msg_digest.cpp src/core/cms_signature.cpp src/core/exception.cpp)
 target_include_directories(core PUBLIC include)
 target_link_libraries(core PUBLIC OpenSSL::Crypto PRIVATE scope_guard)
 

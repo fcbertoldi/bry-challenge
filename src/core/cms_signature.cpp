@@ -32,7 +32,7 @@ void cmsSign(PKCS12* p12, const char* passphrase, BIO* data, BIO* out) {
     });
 
     if (!PKCS12_parse(p12, passphrase, &pkey, &cert, &ca)) {
-        throw bry_challenge::BryError("Error parsing PKCS#12 file");
+        throw bry_challenge::InvalidPKCS12("Error parsing PKCS#12 file");
     }
 
     cms = CMS_sign(nullptr, nullptr, nullptr, data, flags);
@@ -165,7 +165,7 @@ void cmsSign(
 
     p12 = d2i_PKCS12_bio(p12BIO, nullptr);
     if (!p12) {
-        throw BryError("Error: Failed to read PKCS12 file");
+        throw InvalidPKCS12("Error: Failed to read PKCS12 file");
     }
 
     dataBIO = BIO_new_file(dataFile, "r");

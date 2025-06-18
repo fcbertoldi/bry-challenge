@@ -29,7 +29,7 @@ std::string toHex(const unsigned char* hash, unsigned int len) {
 
 namespace bry_challenge {
 
-BryError::BryError(const std::string& message) : std::runtime_error(message) {}
+
 
 void msgDigest(std::istream& istream, std::vector<unsigned char>& outDigest) {
     int ret = 1;

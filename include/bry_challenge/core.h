@@ -14,6 +14,11 @@ public:
     explicit BryError(const std::string& message);
 };
 
+class InvalidPKCS12 : public BryError {
+public:
+    explicit InvalidPKCS12(const std::string& message);
+};
+
 struct SignInfo {
     std::string commonName;
     std::tm signingTime;
