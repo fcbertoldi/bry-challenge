@@ -12,18 +12,15 @@ Linux:
 
 ## Building
 
-Caso ainda não tenha configurado os perfil de toolchain no Conan, rode o seguinte comando:
+Rode os seguintes targets do make:
 
 ```
-conan profile detect --force
+make clean
+make cmake-configure && make build-debug
 ```
 
-
-Rode o seguinte comando para que `conan` gere os arquivos CMake referentes à dependência de bibliotecas:
+## Testes
 
 ```
-cd <project-root>
-conan install . --output-folder=build --build=missing
+make test
 ```
-
-
