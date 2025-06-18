@@ -40,6 +40,8 @@ void cmsSign(
 
 bool cmsVerify(const char* signedFile, SignInfo& signInfo);
 
+bool cmsVerify(const char* signedData, std::size_t signedLen, SignInfo& signInfo);
+
 }
 
 #endif // BRY_CHALLENGE_CORE_MSG_DIGEST_H

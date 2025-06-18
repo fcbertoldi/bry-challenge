@@ -90,7 +90,7 @@ public:
                 );
             } catch (const bry_challenge::InvalidPKCS12& err) {
                 response.setStatus(HTTPResponse::HTTP_BAD_REQUEST);
-                ostr << "Invalid PKCS12 file";
+                ostr << "Invalid PKCS12 file, or wrong password";
                 return;
             } catch (const std::exception& err) {
                 response.setStatus(HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);

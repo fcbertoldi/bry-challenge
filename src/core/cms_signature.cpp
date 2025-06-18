@@ -245,4 +245,15 @@ bool cmsVerify(const char* signedFile, SignInfo& signInfo) {
     return ::cmsVerify(p7BIO, signInfo);
 }
 
+bool cmsVerify(const char* signedData, std::size_t signedLen, SignInfo& signInfo) {
+    int ret = 1;
+    BIO* signedBIO = nullptr;
+    auto cleanupGuard = sg::make_scope_guard([&]{
+        BIO_free(signedBIO);
+    });
+    signedBIO = BIO_new_mem_buf(signedData, signedLen);
+
+    return ::cmsVerify(signedBIO, signInfo);
+}
+
 }
