@@ -1,12 +1,17 @@
 {
   "dependencies": [
     {
+      "name": "catch2",
+      "version>=": "3.8.1"
+    },
+    {
       "name": "openssl",
       "version>=": "3.5.0"
     },
     {
-      "name": "catch2",
-      "version>=": "3.8.1"
+      "name": "poco",
+      "version>=": "1.14.1",
+      "features": ["net", "util"]
     }
   ]
 }
