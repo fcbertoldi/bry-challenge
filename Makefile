@@ -13,4 +13,7 @@ test:
 clean:
 	rm -rf build/
 
+archive:
+	git archive --prefix=bry-challenge/ --format=zip --output=./bry-challenge.zip HEAD
+
 .PHONY: cmake-configure build-debug build-release test clean

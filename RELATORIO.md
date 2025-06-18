@@ -1,8 +1,26 @@
-# # Relatório Bry Challenge
+# Relatório Bry Challenge
 
 ## Sistema Operacional
 
 O sistema-alvo é *Linux*.
+
+## Entregáveis
+
+### Etapa 1
+
+A assinatura gerada pelo executável `bry-checksum` está `data/doc.txt.sha`.
+
+### Etapa 2
+
+O arquivo assinado pelo executável `bry-signature` está em `data/doc.txt.p7s`.
+
+### Etapa 3
+
+A integridade da assinatura do arquivo gerado na etapa 2 foi verificada pelo executável `bry-verify`.
+
+### Etapa 4
+
+O servidor `bry-server`, rodando em http://localhost:8080, foi testado manualmente usando o `Postman`.
 
 ## Estrutura do projeto
 
