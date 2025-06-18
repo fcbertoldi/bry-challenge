@@ -40,7 +40,7 @@ void cmsSign(
 );
 
 void cmsSign(
-    const unsigned char* p12Data, std::size_t p12Length, const char* passphrase, const char* data, std::size_t dataLength, char** out, std::size_t* outLength
+    const char* p12Data, std::size_t p12Length, const char* passphrase, const char* data, std::size_t dataLength, char** out, std::size_t* outLength
 );
 
 bool cmsVerify(const char* signedFile, SignInfo& signInfo);

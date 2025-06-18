@@ -35,6 +35,13 @@ std::string getPartValue(const MessageHeader& header) {
     return params.get("name", "");
 }
 
+std::vector<char> copyStream(std::istream& stream) {
+    std::ostringstream oss;
+    StreamCopier::copyStream(stream, oss);
+    std::string tmp = oss.str();
+    return std::vector<char>(tmp.begin(), tmp.end());
+}
+
 std::string toISO8601(const std::tm& tm) {
     std::ostringstream oss;
     oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
@@ -52,7 +59,7 @@ public:
 
         auto name = ::getPartValue(header);
         if (name == "signed_data") {
-            signedData = std::vector<char>(std::istream_iterator<char>(stream), std::istream_iterator<char>());
+            signedData = ::copyStream(stream);
         }
     }
 
@@ -67,7 +74,7 @@ public:
         }
         auto name = ::getPartValue(header);
         if (name == "pkcs12") {
-            pkcs12 = std::vector<char>(std::istream_iterator<char>(stream), std::istream_iterator<char>());
+            pkcs12 = ::copyStream(stream);
         } else if (name == "data") {
             data = std::vector<char>(std::istream_iterator<char>(stream), std::istream_iterator<char>());
         }
@@ -162,7 +169,7 @@ public:
             char *out = nullptr;
             std::size_t outLen = 0;
             bry_challenge::cmsSign(
-                reinterpret_cast<unsigned char*>(partHandler.pkcs12.data()),
+                partHandler.pkcs12.data(),
                 partHandler.pkcs12.size(),
                 pkcs12Passwd.c_str(),
                 partHandler.data.data(),
@@ -170,7 +177,6 @@ public:
                 &out,
                 &outLen
             );
-            std::cout << "Verify out length: " << outLen << std::endl;
             response.setStatus(HTTPResponse::HTTP_OK);
             Base64Encoder encoder(ostr);
             encoder.write(out, outLen);

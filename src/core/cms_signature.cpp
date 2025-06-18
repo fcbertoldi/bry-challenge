@@ -113,8 +113,10 @@ void extractX509Data(PKCS7* p7, bry_challenge::SignInfo& signInfo) {
 }
 
 bool cmsVerify(BIO* signedBIO, bry_challenge::SignInfo& signInfo) {
+    int ret = 1;
     PKCS7* p7 = nullptr;
     auto cleanupGuard = sg::make_scope_guard([&]{
+        BRY_LOG_OPENSSL_ERROR(ret != 0);
         PKCS7_free(p7);
     });
 
@@ -133,6 +135,8 @@ bool cmsVerify(BIO* signedBIO, bry_challenge::SignInfo& signInfo) {
     int verifyResult = PKCS7_verify(
         p7, nullptr, nullptr, nullptr, nullptr, PKCS7_NOVERIFY
     );
+
+    ret = 0;
     return verifyResult == 1;
 }
 
@@ -183,13 +187,23 @@ void cmsSign(
 }
 
 void cmsSign(
-    const unsigned char* p12Data, std::size_t p12Length, const char* passphrase, const char* data, std::size_t dataLength, char** out, std::size_t* outLength
+    const char* p12Data, std::size_t p12Length, const char* passphrase, const char* data, std::size_t dataLength, char** out, std::size_t* outLength
 ) {
     if (!p12Data || p12Length == 0 || !passphrase || !data || !out) {
         throw BryError("Invalid input parameters");
     }
 
-    PKCS12* p12 = d2i_PKCS12(nullptr, &p12Data, static_cast<long>(p12Length));
+    int ret = 1;
+    auto cleanupGuard = sg::make_scope_guard([&]{
+        BRY_LOG_OPENSSL_ERROR(ret != 0);
+    });
+
+    BIO* p12BIO = BIO_new_mem_buf(p12Data, static_cast<int>(p12Length));
+    if (!p12BIO) {
+       throw std::runtime_error("Failed to create BIO");
+    }
+    PKCS12* p12 = d2i_PKCS12_bio(p12BIO, nullptr);
+    //PKCS12* p12 = d2i_PKCS12(nullptr, &p12Data, static_cast<long>(p12Length));
     if (!p12) {
         throw BryError("Failed to parse PKCS#12 data");
     }
@@ -226,6 +240,8 @@ void cmsSign(
     BIO_free(outBio);  // won't free buffer due to BIO_NOCLOSE
     BIO_free(dataBio);
     PKCS12_free(p12);
+
+    ret = 0;
 }
 
 bool cmsVerify(const char* signedFile, SignInfo& signInfo) {
