@@ -46,7 +46,6 @@ std::string toISO8601(const std::tm& tm) {
 class VerifyPartHandler : public PartHandler {
 public:
     void handlePart(const MessageHeader& header, std::istream& stream) override {
-        std::cout << "Content-Disposition: " << header.get("Content-Disposition", "") << std::endl;
         if (!header.has("Content-Disposition")) {
             return;
         }
@@ -63,7 +62,6 @@ public:
 class SignPartHandler : public PartHandler {
 public:
     void handlePart(const MessageHeader& header, std::istream& stream) override {
-        std::cout << "Content-Disposition: " << header.get("Content-Disposition", "") << std::endl;
         if (!header.has("Content-Disposition")) {
             return;
         }
@@ -172,7 +170,7 @@ public:
                 &out,
                 &outLen
             );
-
+            std::cout << "Verify out length: " << outLen << std::endl;
             std::ostringstream base64Stream;
             Base64Encoder encoder(base64Stream);
             encoder.write(out, outLen);
