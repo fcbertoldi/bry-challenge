@@ -14,9 +14,14 @@ public:
     explicit BryError(const std::string& message);
 };
 
-class InvalidPKCS12 : public BryError {
+class PKCS12Error : public BryError {
 public:
-    explicit InvalidPKCS12(const std::string& message);
+    explicit PKCS12Error(const std::string& message);
+};
+
+class PKCS7Error : public BryError {
+public:
+    explicit PKCS7Error(const std::string& message);
 };
 
 struct SignInfo {
