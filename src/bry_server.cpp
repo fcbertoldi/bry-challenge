@@ -171,13 +171,10 @@ public:
                 &outLen
             );
             std::cout << "Verify out length: " << outLen << std::endl;
-            std::ostringstream base64Stream;
-            Base64Encoder encoder(base64Stream);
+            response.setStatus(HTTPResponse::HTTP_OK);
+            Base64Encoder encoder(ostr);
             encoder.write(out, outLen);
             encoder.close();
-
-            response.setStatus(HTTPResponse::HTTP_OK);
-            ostr << base64Stream.str();
         } catch (Exception& err) {
             response.setStatus(HTTPResponse::HTTP_INTERNAL_SERVER_ERROR);
             ostr << "Error: " << err.displayText() << "\n";
